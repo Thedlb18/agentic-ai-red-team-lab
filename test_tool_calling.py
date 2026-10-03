@@ -72,7 +72,7 @@ CASES = [
      "tool": "create_ticket", "args": {"title": "printer broken", "priority": "high"}},
     {"id": "none_1", "prompt": "Say hello to me.",
      "tool": None, "args": {}},
-    {"id": "weather_2", "prompt": "Will it rain in Lyon tomorrow?",
+    {"id": "weather_2", "prompt": "What's the weather in Lyon?",
      "tool": "get_weather", "args": {"city": "lyon"}},
 ]
 
