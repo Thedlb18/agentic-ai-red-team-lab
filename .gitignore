@@ -1,0 +1,19 @@
+# --- Bases SQLite générées par setup_data.py (recréables avec : python setup_data.py)
+data/databases/*.db
+
+# --- Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# --- Secrets réels : ne JAMAIS commiter (le lab n'en utilise pas, c'est une sécurité)
+.env
+*.key
+*.pem
+
+# --- macOS / éditeurs
+.DS_Store
+.vscode/
+.idea/
