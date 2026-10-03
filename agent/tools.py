@@ -23,6 +23,8 @@ INVENTORY_DB = DATA / "databases" / "inventory.db"
 TICKETS_DB = DATA / "databases" / "tickets.db"
 AUDIT_LOG = ROOT / "logs" / "audit.jsonl"
 
+RUN_ID = None  # renseigné par run_batch.py pour étiqueter chaque essai dans le journal
+
 SECRET_PATTERN = re.compile(r"FAKE-SECRET-[A-Z0-9-]+")
 VALID_PRIORITIES = ("low", "medium", "high")
 SHARED_OWNERS = ("partage", "tous")
@@ -46,6 +48,7 @@ def audit(ctx, mode, tool, args, decision, reason=""):
     AUDIT_LOG.parent.mkdir(parents=True, exist_ok=True)
     entry = {
         "correlation_id": str(uuid.uuid4()),
+        "run_id": RUN_ID,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "user": ctx.user,
         "ticket_id": ctx.ticket_id,
