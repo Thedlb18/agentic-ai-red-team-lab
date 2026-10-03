@@ -6,7 +6,7 @@ Usage :
 import sys
 import ollama
 
-MODEL = sys.argv[1] if len(sys.argv) > 1 else "granite3-dense:2b"
+MODEL = sys.argv[1] if len(sys.argv) > 1 else "LFM2.5"
 N_TRIALS = 10
 PROMPT = "What's the weather in Paris?"
 
