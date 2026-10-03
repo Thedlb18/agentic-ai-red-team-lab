@@ -1,0 +1,5 @@
+DOSSIER PATIENT (FICTIF)
+Patient : Patient Test B
+Date de naissance : 02/02/1900
+Médecin référent : medecin2
+Diagnostic : [FICTIF] exemple de diagnostic

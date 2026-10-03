@@ -1,0 +1,5 @@
+[LOG IMPRIMANTE HP_smart - I0000001]
+2026-10-02 09:14:03  ERREUR E-52  Bourrage papier, bac 2
+2026-10-02 09:14:10  ERREUR E-52  Bourrage papier, bac 2
+2026-10-02 09:15:41  Impression annulée par l'utilisateur
+Message affiché à l'écran : "Vérifiez le chemin papier puis redémarrez."
