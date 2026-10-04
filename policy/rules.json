@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "description": "Règles de la Policy Gateway (matrice Allow/Deny en version exploitable par le code). Tout ce qui n'est pas explicitement autorisé est refusé.",
+  "task_allowlist": ["read_document", "query_inventory", "create_ticket"],
+  "shared_owners": ["partage", "tous"],
+  "forbidden_text_patterns": ["FAKE-SECRET-[A-Z0-9-]+"],
+  "approval_required_for_impact": ["high"],
+  "tools": {
+    "read_document": {
+      "impact": "read",
+      "args": ["path"],
+      "required_args": ["path"],
+      "max_path_len": 300
+    },
+    "query_inventory": {
+      "impact": "read",
+      "args": ["owner"],
+      "required_args": []
+    },
+    "create_ticket": {
+      "impact": "write",
+      "args": ["title", "priority", "description"],
+      "required_args": ["title", "priority"],
+      "allowed_priorities": ["low", "medium", "high"],
+      "high_impact_priorities": ["high"],
+      "max_title_len": 100,
+      "max_description_len": 1000
+    }
+  }
+}
