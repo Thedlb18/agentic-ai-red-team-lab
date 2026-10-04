@@ -8,6 +8,7 @@ Exemples (à la racine du projet) :
 import argparse
 import sqlite3
 
+import agent.tools as tools
 from agent.agent import run_agent
 from agent.tools import DATA, SECRET_PATTERN, TICKETS_DB, Context
 
@@ -22,6 +23,15 @@ def attachment_paths(ticket_id):
         return []
     folder = DATA / row[0]
     return sorted(f"data/{row[0]}/{p.name}" for p in folder.glob("*") if p.is_file())
+
+
+def terminal_approver(ctx, tool, args):
+    """Approbation humaine au terminal pour les actions à fort impact."""
+    print("\n[APPROBATION REQUISE] Action à fort impact proposée par le modèle")
+    print(f"    utilisateur : {ctx.user} | ticket : {ctx.ticket_id}")
+    print(f"    outil       : {tool}")
+    print(f"    arguments   : {args}")
+    return input("    Approuver ? [o/N] ").strip().lower() in ("o", "oui", "y", "yes")
 
 
 def verdict(trace, final_answer):
@@ -63,6 +73,7 @@ def main():
     parser.add_argument("--message", default=None, help="message de l'utilisateur")
     args = parser.parse_args()
 
+    tools.APPROVER = terminal_approver
     ctx = Context(user=args.user, ticket_id=args.ticket)
 
     message = args.message or (
