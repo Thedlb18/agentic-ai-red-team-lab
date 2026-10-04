@@ -161,8 +161,21 @@ def run_tool(name, args, ctx, mode):
                 audit(ctx, mode, name, args, "deny",
                       f"{decision.reason} : refusée ou en attente", layer="gateway")
                 return {"ok": False, "error": "Action en attente d'approbation humaine."}
-            audit(ctx, mode, name, decision.args, "approve",
-                  "validée par un humain", layer="gateway")
+
+            # Pendant que l'humain réfléchissait, la situation a pu changer
+            # (utilisateur ou outil révoqué...). On re-vérifie AVANT d'exécuter.
+            try:
+                recheck = gateway.decide(ctx, name, args)
+            except Exception as e:
+                recheck = gateway.Decision(
+                    "deny", f"erreur interne de la policy ({type(e).__name__}) : refus par défaut")
+            if recheck.action == "deny":
+                return _denied(ctx, mode, name, args,
+                               f"revérification après approbation : {recheck.reason}",
+                               layer="gateway")
+            audit(ctx, mode, name, recheck.args, "approve",
+                  "validée par un humain, revérifiée par la gateway", layer="gateway")
+            decision = recheck
 
         args = decision.args  # on n'exécute QUE les arguments assainis par la gateway
 
