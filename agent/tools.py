@@ -145,7 +145,9 @@ def _human_approves(ctx, tool, args):
     return bool(APPROVER(ctx, tool, args))
 
 
-def run_tool(name, args, ctx, mode):
+def run_tool(name, args, ctx, mode, executor=None):
+    """executor : fonction (nom, args) -> dict qui REMPLACE les outils locaux (ex. pont MCP).
+    La gateway reste consultée AVANT, quel que soit l'exécuteur."""
     if mode == "hardened":
         try:
             decision = gateway.decide(ctx, name, args)
@@ -178,6 +180,12 @@ def run_tool(name, args, ctx, mode):
             decision = recheck
 
         args = decision.args  # on n'exécute QUE les arguments assainis par la gateway
+
+    if executor is not None:
+        try:
+            return executor(name, args)
+        except Exception:  # noqa: BLE001  fail closed
+            return _denied(ctx, mode, name, args, "erreur de l'exécuteur MCP", layer="mcp-host")
 
     func = TOOL_FUNCTIONS.get(name)
     if func is None:
