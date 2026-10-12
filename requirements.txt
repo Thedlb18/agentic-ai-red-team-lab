@@ -1,0 +1,3 @@
+ollama
+mcp==1.30.0
+pydantic

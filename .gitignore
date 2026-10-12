@@ -5,6 +5,7 @@ data/databases/*.db
 __pycache__/
 *.pyc
 .venv/
+.venv-*/
 venv/
 .ipynb_checkpoints/
 

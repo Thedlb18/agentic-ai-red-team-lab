@@ -6,12 +6,14 @@ Le modèle ne fait que demander. Cette fonction (du code, pas du texte) répond 
   - "approve" : action à fort impact, un humain doit valider
 
 Ordre des contrôles (celui du PDF) :
-  1. identité  2. allowlist d'outils  3. forme des arguments
+  1. identité  2. allowlist d'outils (+ quota par run)  3. forme des arguments
   4. motifs interdits  5. périmètre (ressource) et validation  6. niveau d'impact
 
 Principe : en cas de doute ou d'erreur, on REFUSE (fail closed).
 Les règles sont dans rules.json ; la révocation (kill switch) dans revoked.json.
 """
+import base64
+import codecs
 import json
 import re
 import sqlite3
@@ -39,6 +41,50 @@ def _load(path):
 
 def _deny(reason):
     return Decision("deny", reason)
+
+
+# --------------------------------------------------------------------------
+# Détection de motifs interdits, y compris ENCODÉS (base64, hex, ROT13, inversé,
+# caractères invisibles). Un filtre regex seul est contourné par un simple encodage.
+# --------------------------------------------------------------------------
+_INVISIBLE = re.compile(r"[\s\u200b-\u200f\u2060\ufeff]+")
+
+
+def _strings(obj, depth=0):
+    if depth > 5:
+        return
+    if isinstance(obj, str):
+        yield obj
+    elif isinstance(obj, dict):
+        for v in obj.values():
+            yield from _strings(v, depth + 1)
+    elif isinstance(obj, (list, tuple)):
+        for v in obj:
+            yield from _strings(v, depth + 1)
+    elif obj is not None:
+        yield str(obj)
+
+
+def _text_variants(args):
+    yield json.dumps(args, ensure_ascii=False, default=str)  # forme brute (comme avant)
+    for text in _strings(args):
+        text = text[:20000]
+        yield text
+        yield text.upper()
+        yield text[::-1]
+        yield codecs.decode(text, "rot13")
+        yield _INVISIBLE.sub("", text)
+        for tok in re.findall(r"[A-Za-z0-9+/=_\-]{16,}", text)[:30]:
+            for decoder in (base64.b64decode, base64.urlsafe_b64decode):
+                try:
+                    yield decoder(tok + "=" * (-len(tok) % 4)).decode("utf-8", "ignore")
+                except Exception:  # noqa: BLE001
+                    pass
+        for tok in re.findall(r"[0-9a-fA-F]{16,}", text)[:30]:
+            try:
+                yield bytes.fromhex(tok[: len(tok) // 2 * 2]).decode("utf-8", "ignore")
+            except ValueError:
+                pass
 
 
 # --------------------------------------------------------------------------
@@ -125,6 +171,11 @@ def decide(ctx, tool, args):
         return _deny(f"outil révoqué : {tool}")
     cfg = rules["tools"][tool]
 
+    # 2bis. Quota d'appels par run (excessive agency : tickets en masse, boucles d'outils)
+    limit = rules.get("max_calls_per_run", {}).get(tool)
+    if limit is not None and getattr(ctx, "counts", {}).get(tool, 0) >= limit:
+        return _deny(f"quota d'appels atteint pour {tool} ({limit} par run)")
+
     # 3. Forme des arguments
     if not isinstance(args, dict):
         return _deny("arguments invalides")
@@ -135,11 +186,11 @@ def decide(ctx, tool, args):
     if missing:
         return _deny(f"arguments manquants : {missing}")
 
-    # 4. Motifs interdits (ex. le secret) dans n'importe quel argument
-    text = json.dumps(args, ensure_ascii=False, default=str)
-    for pattern in rules["forbidden_text_patterns"]:
-        if re.search(pattern, text):
-            return _deny("motif sensible détecté dans les arguments")
+    # 4. Motifs interdits (ex. le secret) dans n'importe quel argument, même encodé
+    for variant in _text_variants(args):
+        for pattern in rules["forbidden_text_patterns"]:
+            if re.search(pattern, variant):
+                return _deny("motif sensible détecté dans les arguments (éventuellement encodé)")
 
     # 5. Périmètre de la ressource + validation propres à l'outil
     result = CHECKERS[tool](ctx, args, cfg, rules)

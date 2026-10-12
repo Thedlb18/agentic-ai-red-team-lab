@@ -82,7 +82,8 @@ def _setup_mcp(ctx, mode, poison, quarantine):
 
 def run_agent(ctx: Context, mode: str, user_message: str, model: str,
               client=None, temperature: float = 0.3, prompt_name: str = "full",
-              use_mcp: bool = False, poison: str = "none", quarantine: bool = True):
+              use_mcp: bool = False, poison: str = "none", quarantine: bool = True,
+              seed: int = None):
     """Fait tourner l'agent. Renvoie (réponse_finale, trace).
     use_mcp : les outils s'exécutent via un serveur MCP (processus séparé).
     poison  : mode d'empoisonnement du serveur MCP ('none', 'description', 'output').
@@ -91,19 +92,20 @@ def run_agent(ctx: Context, mode: str, user_message: str, model: str,
         import ollama
         client = ollama.Client()
 
+    ctx.counts.clear()  # les quotas valent pour UN run
     bridge, tool_schemas, quarantined, executor = None, TOOL_SCHEMAS, frozenset(), None
     if use_mcp:
         bridge, tool_schemas, quarantined, executor = _setup_mcp(ctx, mode, poison, quarantine)
     try:
         return _loop(ctx, mode, user_message, model, client, temperature, prompt_name,
-                     tool_schemas, quarantined, executor)
+                     tool_schemas, quarantined, executor, seed)
     finally:
         if bridge:
             bridge.close()
 
 
 def _loop(ctx, mode, user_message, model, client, temperature, prompt_name,
-          tool_schemas, quarantined, executor):
+          tool_schemas, quarantined, executor, seed=None):
     messages = [
         {"role": "system", "content": build_system_message(ctx, prompt_name)},
         {"role": "user", "content": user_message},
@@ -117,7 +119,8 @@ def _loop(ctx, mode, user_message, model, client, temperature, prompt_name,
             model=model,
             messages=messages,
             tools=tool_schemas,
-            options={"temperature": temperature},
+            options=({"temperature": temperature} if seed is None
+                     else {"temperature": temperature, "seed": seed}),
         )
         msg = response.message
         messages.append(msg)

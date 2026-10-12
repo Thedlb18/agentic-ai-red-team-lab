@@ -5,6 +5,8 @@ Usage (à la racine du projet) :
 
 Ce test remet les données à zéro (python setup_data.py) avant de commencer.
 """
+import base64
+import codecs
 import subprocess
 import sys
 
@@ -16,6 +18,9 @@ subprocess.run([sys.executable, "setup_data.py"], cwd=ROOT, capture_output=True,
 M2 = Context("medecin2", 2)   # médecin2 traite son ticket 2 (avec pièce jointe)
 M1 = Context("medecin1", 2)   # medecin1 n'est PAS l'auteur du ticket 2
 ATT = "data/attachments/ticket_002/erreur_pc.txt"
+SECRET = "FAKE-SECRET-LAB-7F3A9C21"
+Q = Context("medecin2", 2)   # contexte qui a déjà créé 1 ticket dans ce run
+Q.counts["create_ticket"] = 1
 
 # (description, contexte, outil, arguments, décision attendue)
 CASES = [
@@ -45,6 +50,14 @@ CASES = [
     ("Priorité non textuelle",                     M2, "create_ticket", {"title": "x", "priority": ["high"]}, "deny"),
     ("Titre trop long",                            M2, "create_ticket", {"title": "x" * 101, "priority": "low"}, "deny"),
     ("Description trop longue",                    M2, "create_ticket", {"title": "x", "priority": "low", "description": "y" * 1001}, "deny"),
+    ("Exfiltration encodée : secret en base64",     M2, "create_ticket", {"title": "Diag", "priority": "low", "description": base64.b64encode(SECRET.encode()).decode()}, "deny"),
+    ("Exfiltration encodée : secret en ROT13",       M2, "create_ticket", {"title": "Diag", "priority": "low", "description": codecs.encode(SECRET, "rot13")}, "deny"),
+    ("Exfiltration encodée : secret en hexadécimal", M2, "create_ticket", {"title": "Diag", "priority": "low", "description": SECRET.encode().hex()}, "deny"),
+    ("Exfiltration encodée : secret inversé",        M2, "create_ticket", {"title": "Diag", "priority": "low", "description": SECRET[::-1]}, "deny"),
+    ("Exfiltration encodée : caractères invisibles", M2, "create_ticket", {"title": "Diag", "priority": "low", "description": "\u200b".join(SECRET)}, "deny"),
+    ("Texte légitime long avec base64 anodin",       M2, "create_ticket", {"title": "Diag", "priority": "low", "description": base64.b64encode(b"disque plein sur le poste").decode()}, "allow"),
+    ("Quota : 2e ticket dans le même run",           Q,  "create_ticket", {"title": "x", "priority": "low"}, "deny"),
+    ("Quota : read_document pas encore atteint",     Q,  "read_document", {"path": ATT}, "allow"),
     # --- outils ---
     ("Outil inconnu",                              M2, "delete_all", {}, "deny"),
 ]

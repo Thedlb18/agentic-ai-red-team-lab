@@ -16,7 +16,7 @@ import json
 import re
 import sqlite3
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -44,6 +44,7 @@ class Context:
     """
     user: str
     ticket_id: int
+    counts: dict = field(default_factory=dict)  # appels exécutés dans le run en cours (quotas)
 
 
 # --------------------------------------------------------------------------
@@ -180,6 +181,7 @@ def run_tool(name, args, ctx, mode, executor=None):
             decision = recheck
 
         args = decision.args  # on n'exécute QUE les arguments assainis par la gateway
+        ctx.counts[name] = ctx.counts.get(name, 0) + 1  # quota par run (excessive agency)
 
     if executor is not None:
         try:
