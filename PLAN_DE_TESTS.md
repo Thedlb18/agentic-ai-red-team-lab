@@ -23,21 +23,14 @@ utilisé par défaut dans ce projet est `LFM2.5`. Adapte-le si `ollama list`
 affiche un autre nom. Les tests avec `--model scripted` n'ont pas besoin
 d'Ollama.
 
-**Attention aux données :** `setup_data.py`, `test_gateway.py`, `test_mcp.py`, `test_catalog.py` et `run_batch.py` recréent les fichiers et bases fictifs du lab. Les campagnes réinitialisent les données avant chaque essai. Sauvegarde ailleurs toute donnée de test que tu veux garder. `logs/audit.jsonl` s'accumule; note l'heure de début ou sauvegarde-le avant la campagne si tu veux isoler les nouvelles traces.
+**Attention aux données :** `setup_data.py`, `Test_gateway.py`, `test_mcp.py`, `test_catalog.py` et `run_batch.py` recréent les fichiers et bases fictifs du lab. Les campagnes réinitialisent les données avant chaque essai. Sauvegarde ailleurs toute donnée de test que tu veux garder. `logs/audit.jsonl` s'accumule; note l'heure de début ou sauvegarde-le avant la campagne si tu veux isoler les nouvelles traces.
 
 ## 1. Contrôle rapide hors modèle
 
 Lance ces scripts depuis la racine, un par un, en utilisant le même
 interpréteur du projet :
 
-```sh
-source .venv/bin/activate
-python test_catalog.py
-python Test_gateway.py
-python test_mcp.py
-```
-
-Ou, plus simplement :
+Ou lance les cibles Make correspondantes :
 
 ```sh
 make test-catalog
@@ -51,7 +44,54 @@ Résultat attendu : code de sortie `0` et toutes les vérifications affichées `
 - `Test_gateway.py` teste les permissions, chemins, arguments, exfiltration simple/encodée, priorités, quotas, révocation et restauration. Vérifie le total final sans `ÉCHEC`.
 - `test_mcp.py` démarre de vrais processus serveur MCP avec faux modèle scripté; vérifie le tool poisoning, les empreintes, la quarantaine, le filtrage des sorties et les journaux.
 
-Ces scripts réinitialisent le lab. Si un test échoue, conserve sa sortie et vérifie d'abord que tu l'as lancé depuis le dépôt avec le bon interpréteur Python global.
+Ces scripts réinitialisent le lab. Si un test échoue, conserve sa sortie et vérifie d'abord que tu l'as lancé depuis le dépôt avec `.venv/bin/python`.
+
+## Cibles de test du Makefile
+
+`make help` liste les commandes. La suite locale recommandée est :
+
+```sh
+make test-all
+```
+
+Elle exécute les tests du catalogue, de la gateway, de MCP, puis une campagne
+complète avec le modèle scripté en modes vulnérable et durci. Elle n'appelle pas
+Ollama, mais elle réinitialise les données et génère des rapports de campagne.
+
+Pour vérifier le tool calling du vrai modèle (Ollama doit être démarré et le
+modèle installé) :
+
+```sh
+make test-tool-calling
+# autre nom de modèle si nécessaire
+make test-tool-calling MODEL=autre-modele
+```
+
+Pour lancer la campagne du catalogue avec LFM2.5, y compris les scénarios MCP :
+
+```sh
+make test-batch-ollama N=1
+```
+
+Cette campagne complète peut être longue et probabiliste. `N` correspond au
+nombre d'essais par scénario et par mode. La campagne scriptée est lancée avec
+`make test-batch-scripted N=1`; elle exerce les contrôles sans Ollama.
+
+La cible paramétrable `make test-batch` permet de réduire le périmètre ou de
+sélectionner un mode :
+
+```sh
+make test-batch MODEL=LFM2.5 N=3 FAMILIES=IND,CTL MODE=both
+make test-batch MODEL=LFM2.5 N=3 CASES=IND-01,DIR-01 MODE=hardened
+make test-batch MODEL=scripted N=1 FAMILIES=POI MODE=both MCP=1
+```
+
+- `MODEL` : modèle Ollama, ou `scripted` pour le modèle de test déterministe.
+- `N` : répétitions par scénario et par mode.
+- `MODE` : `vulnerable`, `hardened` ou `both`.
+- `FAMILIES` / `CASES` : limiter la campagne; `CASES` prend priorité.
+- `PROMPTS` : prompt ou liste de prompts séparés par des virgules.
+- `MCP=1` : inclure les cas d'empoisonnement MCP.
 
 ## 2. Tool calling avec Ollama
 
