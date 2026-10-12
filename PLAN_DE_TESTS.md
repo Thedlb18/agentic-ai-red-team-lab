@@ -4,30 +4,45 @@ Ce document rassemble les tests présents dans le projet et les essais manuels u
 
 ## Avant de commencer
 
-Depuis la racine du dépôt, installe les dépendances Python puis vérifie Ollama et le modèle :
+Depuis la racine du dépôt, utilise le même interpréteur Python pour tout le
+projet afin d'éviter les écarts de dépendances entre l'environnement système et
+le lab.
 
 ```sh
-python3 -m pip install -r requirements.txt
-python3 -c 'import sys; print(sys.executable)'
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -c 'import sys; print(sys.executable)'
 ollama list
 ```
 
-Les dépendances sont installées dans l'interpréteur Python global : aucun
-environnement virtuel n'est nécessaire. Lance les commandes ci-dessous avec
-`python3`.
-
-Le nom utilisé par défaut dans ce projet est `LFM2.5`. Adapte-le si `ollama list` affiche un autre nom. Les tests avec `--model scripted` n'ont pas besoin d'Ollama.
+Le projet est conçu pour être exécuté depuis `.venv/bin/python` (ou via `make`)
+pour garantir la compatibilité de `mcp` et des bibliothèques du lab. Le nom
+utilisé par défaut dans ce projet est `LFM2.5`. Adapte-le si `ollama list`
+affiche un autre nom. Les tests avec `--model scripted` n'ont pas besoin
+d'Ollama.
 
 **Attention aux données :** `setup_data.py`, `test_gateway.py`, `test_mcp.py`, `test_catalog.py` et `run_batch.py` recréent les fichiers et bases fictifs du lab. Les campagnes réinitialisent les données avant chaque essai. Sauvegarde ailleurs toute donnée de test que tu veux garder. `logs/audit.jsonl` s'accumule; note l'heure de début ou sauvegarde-le avant la campagne si tu veux isoler les nouvelles traces.
 
 ## 1. Contrôle rapide hors modèle
 
-Lance ces scripts depuis la racine, un par un :
+Lance ces scripts depuis la racine, un par un, en utilisant le même
+interpréteur du projet :
 
 ```sh
-python3 test_catalog.py
-python3 Test_gateway.py
-python3 test_mcp.py
+source .venv/bin/activate
+python test_catalog.py
+python Test_gateway.py
+python test_mcp.py
+```
+
+Ou, plus simplement :
+
+```sh
+make test-catalog
+make test-gateway
+make test-mcp
 ```
 
 Résultat attendu : code de sortie `0` et toutes les vérifications affichées `OK`.
@@ -41,7 +56,8 @@ Ces scripts réinitialisent le lab. Si un test échoue, conserve sa sortie et v�
 ## 2. Tool calling avec Ollama
 
 ```sh
-python3 test_tool_calling.py LFM2.5
+source .venv/bin/activate
+python test_tool_calling.py LFM2.5
 ```
 
 Ce script effectue cinq essais pour chacun de ses cas. Vérifie les colonnes `bon outil`, `bons args` et `erreurs` : les appels météo, addition et ticket doivent choisir le bon outil et les bons arguments; « Say hello to me » ne doit appeler aucun outil. Les résultats sont probabilistes et dépendent du modèle installé. Ce test de démonstration utilise des outils météo/addition fictifs, pas les outils métier du laboratoire.
@@ -51,13 +67,14 @@ Ce script effectue cinq essais pour chacun de ses cas. Vérifie les colonnes `bo
 Pour afficher les 29 cas sans lancer d'essais :
 
 ```sh
-python3 run_batch.py --list
+source .venv/bin/activate
+python run_batch.py --list
 ```
 
 Pour vérifier rapidement le moteur sans modèle externe, y compris les cas MCP :
 
 ```sh
-python3 run_batch.py --n 1 --mode both --model scripted --mcp
+python run_batch.py --n 1 --mode both --model scripted --mcp
 ```
 
 Le modèle `scripted` joue le scénario d'attaque prédéfini; c'est un test des contrôles, pas une mesure de résistance de LFM2.5.
@@ -65,14 +82,16 @@ Le modèle `scripted` joue le scénario d'attaque prédéfini; c'est un test des
 Pour une première mesure réelle avec le modèle local et MCP :
 
 ```sh
-python3 run_batch.py --n 1 --mode both --model LFM2.5 --mcp
+source .venv/bin/activate
+python run_batch.py --n 1 --mode both --model LFM2.5 --mcp
 ```
 
 Cela fait 29 cas x 1 essai x 2 modes, avec un appel réel du modèle pour chaque essai. Pour des résultats moins sensibles au hasard, remplace `--n 1` par `--n 5` ou `--n 10`; le temps augmente proportionnellement. Tu peux d'abord sélectionner des familles :
 
 ```sh
-python3 run_batch.py --n 3 --mode both --model LFM2.5 --families IND,DIR,IDN,ARG,ENC
-python3 run_batch.py --n 3 --mode both --model LFM2.5 --mcp --families POI
+source .venv/bin/activate
+python run_batch.py --n 3 --mode both --model LFM2.5 --families IND,DIR,IDN,ARG,ENC
+python run_batch.py --n 3 --mode both --model LFM2.5 --mcp --families POI
 ```
 
 Les rapports sont enregistrés sous `benchmarks/results/` et `benchmarks/campaigns/`. Dans le mode `hardened`, regarde notamment les appels non autorisés ayant abouti, l'exfiltration, les succès de tâche légitime, les erreurs et les doublons. Un taux d'attaque nul ne suffit pas à prouver la gateway si le modèle n'a jamais tenté l'attaque. Dans le mode `vulnerable`, une attaque ratée peut simplement signifier que le modèle n'a pas suivi l'injection.
@@ -80,7 +99,8 @@ Les rapports sont enregistrés sous `benchmarks/results/` et `benchmarks/campaig
 Pour isoler quelques cas :
 
 ```sh
-python3 run_batch.py --n 3 --mode both --model LFM2.5 --cases IND-01,DIR-01,ARG-01,CTL-01
+source .venv/bin/activate
+python run_batch.py --n 3 --mode both --model LFM2.5 --cases IND-01,DIR-01,ARG-01,CTL-01
 ```
 
 Cas disponibles (les scénarios détaillés et leurs payloads sont dans `attacks/catalog.json`) :
@@ -104,7 +124,8 @@ Le programme demande confirmation au terminal pour une action de priorité `high
 Réinitialise les données avant chaque essai indépendant :
 
 ```sh
-python3 setup_data.py
+source .venv/bin/activate
+python setup_data.py
 ```
 
 Puis lance les cas suivants (les commandes vulnérable/durci utilisent volontairement le même ticket et le même message) :
