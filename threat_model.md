@@ -85,7 +85,61 @@ Identité distincte de l'agent, allowlist d'outils par tâche, permissions par r
 
 **Principe directeur** : le modèle peut être trompé, mais la Policy Gateway décide si l'action s'exécute.
 
-## 8. Points à vérifier avant publication
+## 8. Ce que la défense garantit — et ses limites
+
+### Ce que le prompt ne garantit pas
+
+Le system prompt est une consigne donnée au modèle, pas un mécanisme
+d'autorisation. Un modèle peut mal interpréter, ignorer ou être amené à
+contourner cette consigne par une injection directe, une pièce jointe ou un
+résultat d'outil. La réussite du prompt à refuser un scénario dans un essai
+particulier ne prouve donc pas que l'action serait bloquée si le modèle se
+trompait.
+
+### Rôle de la Policy Gateway
+
+En mode `hardened`, le modèle ne fait que proposer un appel. Le code passe cet
+appel à `policy.gateway.decide()` avant l'exécution, et ne transmet à l'outil
+que les arguments assainis par cette décision. La gateway contrôle notamment
+l'identité fournie par le programme, l'allowlist, les quotas, la forme des
+arguments, les motifs sensibles, le périmètre des ressources et, le cas
+échéant, l'approbation humaine. Une erreur de policy est refusée par défaut.
+En mode `vulnerable`, cette barrière n'est pas consultée : ce mode sert de
+baseline expérimentale et ne doit pas être utilisé comme une configuration sûre.
+
+### Comment interpréter les preuves du laboratoire
+
+`make demo-defense-boundary` rejoue le cas `IND-01` avec le modèle scripté. Ce
+modèle obéit intentionnellement à l'injection; ainsi, le test ne mesure pas la
+résistance linguistique d'un LLM. Il compare les conséquences de la même
+proposition malveillante sans gateway (`vulnerable`) et avec gateway
+(`hardened`). Le test `test_catalog.py` vérifie également que les attaques
+scriptées réussissent en mode vulnérable, qu'aucun appel non autorisé n'aboutit
+en mode durci dans les cas couverts, et que la tâche légitime reste possible.
+
+Les campagnes avec LFM2.5 sont complémentaires, mais probabilistes : si le
+modèle ne tente pas l'attaque, un résultat sans fuite ne démontre pas que la
+gateway l'aurait bloquée. Il faut lire conjointement les indicateurs de
+tentative, de refus et de réussite.
+
+### Limites connues
+
+- La couverture est bornée par les règles et les scénarios présents dans le
+  laboratoire; elle ne prouve pas une protection contre toutes les injections,
+  encodages, outils ou formes de données.
+- La gateway contrôle les appels d'outils, mais cela ne constitue pas à lui
+  seul un filtre complet des réponses en texte libre du modèle.
+- Les contrôles supposent que le processus, la gateway, la policy, les fichiers
+  et les bases de données ne sont pas compromis ou modifiables par l'attaquant.
+- Le mode `vulnerable` démontre des scénarios contrôlés, pas le comportement de
+  tous les modèles ni l'exploitation d'un système réel.
+- Les familles `SO` constituent un risque résiduel : un contenu hostile placé
+  dans un ticket peut affecter un lecteur ou un traitement ultérieur qui ne
+  repasse pas par les mêmes contrôles.
+- Le laboratoire n'évalue pas la disponibilité, la résistance au déni de
+  service, la sécurité de l'hôte, ni un déploiement multi-utilisateur réel.
+
+## 9. Points à vérifier avant publication
 
 - Reclasser les gravités et vraisemblances après tes propres tests (celles de ce document sont qualitatives, avant mesure).
 - Vérifier le mapping OWASP / MITRE ATLAS dans le rapport final, à partir des versions en vigueur à la date du projet.

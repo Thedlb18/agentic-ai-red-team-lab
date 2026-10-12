@@ -58,6 +58,21 @@ Elle exécute les tests du catalogue, de la gateway, de MCP, puis une campagne
 complète avec le modèle scripté en modes vulnérable et durci. Elle n'appelle pas
 Ollama, mais elle réinitialise les données et génère des rapports de campagne.
 
+Pour montrer spécifiquement la différence entre la consigne du prompt et le
+contrôle d'exécution de la gateway :
+
+```sh
+make demo-defense-boundary
+```
+
+Cette démonstration rejoue une injection indirecte `IND-01` dans les deux modes
+avec le modèle scripté, qui obéit volontairement à l'injection. En mode
+`vulnerable`, l'appel dangereux peut aboutir; en mode `hardened`, la gateway
+refuse l'accès hors périmètre. Ce résultat prouve le comportement du code pour
+ce scénario précis, pas la résistance générale du modèle ni la couverture de
+toutes les attaques. Elle réinitialise les données fictives et écrit des
+résultats dans `benchmarks/`.
+
 Pour vérifier le tool calling du vrai modèle (Ollama doit être démarré et le
 modèle installé) :
 

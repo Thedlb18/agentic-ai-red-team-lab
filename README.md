@@ -32,8 +32,32 @@ détaillées dans [PLAN_DE_TESTS.md](./PLAN_DE_TESTS.md).
 | `make test-batch-scripted` | Joue le catalogue complet avec un modèle scripté en modes vulnérable et durci, y compris les cas MCP; pas d'appel LLM. |
 | `make test-batch-ollama` | Campagne complète avec le vrai modèle Ollama; plus lente et probabiliste. |
 | `make test-batch` | Campagne paramétrable via `N`, `MODEL`, `MODE`, `FAMILIES`, `CASES`, `PROMPTS` et `MCP`. |
+| `make demo-defense-boundary` | Montre sur l'attaque indirecte `IND-01` qu'un modèle qui obéit peut réussir en mode vulnérable, tandis que la gateway bloque l'accès dangereux en mode durci; sans Ollama. |
 | `make test-all` | Lance les tests déterministes locaux, MCP, puis la campagne scriptée complète; n'a pas besoin d'Ollama. |
 
 Les tests et campagnes réinitialisent des données fictives et laissent des
 rapports dans `benchmarks/`. Pour les détails, les prérequis et les exemples de
 campagnes ciblées, voir [PLAN_DE_TESTS.md](./PLAN_DE_TESTS.md).
+
+### Ce que la défense garantit — et ne garantit pas
+
+Le system prompt demande au modèle de traiter les pièces jointes comme des
+données non fiables, mais cette consigne n'est pas une barrière de sécurité :
+le modèle peut la suivre ou s'en écarter. La séparation importante est entre
+**proposition** et **exécution** : en mode durci, chaque appel d'outil proposé
+est soumis à la Policy Gateway dans le code avant toute exécution. La gateway
+vérifie notamment les droits, le périmètre du fichier, les arguments, les
+motifs sensibles, les quotas et les approbations.
+
+Lancer `make demo-defense-boundary` pour voir un scénario contrôlé. Le modèle
+scripté obéit intentionnellement à l'injection : ce n'est pas une mesure de
+résistance d'un LLM, mais une démonstration que le contrôle technique bloque
+l'action interdite indépendamment de l'obéissance du modèle.
+
+Cette défense reste limitée au périmètre implémenté et testé : elle ne prouve
+pas la sécurité face à toutes les attaques ou à un modèle arbitraire. Elle ne
+protège pas contre la compromission de l'hôte ou des fichiers de policy, et le
+filtrage des appels d'outils ne garantit pas à lui seul que chaque réponse en
+texte libre est sûre. Les familles `SO` restent notamment un risque résiduel.
+Les limites et les résultats à mesurer sont détaillés dans
+[threat_model.md](./threat_model.md).

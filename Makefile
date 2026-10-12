@@ -23,7 +23,7 @@ endif
 
 .PHONY: help install setup run-agent run-agent-hardened run-agent-vulnerable \
 	test-catalog test-gateway test-mcp test-tool-calling test-batch \
-	test-batch-scripted test-batch-ollama test-all
+	test-batch-scripted test-batch-ollama demo-defense-boundary test-all
 
 help:
 	@echo "Installation et préparation : install, setup"
@@ -31,6 +31,7 @@ help:
 	@echo "Tests locaux : test-catalog, test-gateway, test-mcp"
 	@echo "Tests modèle réel : test-tool-calling (Ollama requis)"
 	@echo "Campagnes : test-batch-scripted (sans Ollama), test-batch-ollama (Ollama requis), test-batch"
+	@echo "Démonstration prompt vs gateway : demo-defense-boundary (sans Ollama)"
 	@echo "Suite complète hors Ollama : test-all"
 	@echo "Paramètres campagne : N=1 MODEL=LFM2.5 MODE=both FAMILIES=all CASES= PROMPTS=full MCP=0"
 
@@ -70,5 +71,8 @@ test-batch-scripted:
 
 test-batch-ollama:
 	$(PYTHON) run_batch.py --n $(N) --model $(MODEL) --mode $(MODE) --prompts $(PROMPTS) --mcp
+
+demo-defense-boundary:
+	$(PYTHON) run_batch.py --n 1 --model scripted --mode both --prompts full --cases IND-01
 
 test-all: test-catalog test-gateway test-mcp test-batch-scripted
